@@ -18,12 +18,12 @@ services:
     restart: always
     volumes:
       - ./app:/var/www/app
-
     container_name: "app"
 
 
   mysql:
     image: mysql:latest
+    command: mysqld --sql_mode="" --default_authentication_plugin=mysql_native_password
     restart: always
     ports:
       - 4001:3306
