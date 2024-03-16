@@ -21,6 +21,41 @@ class QuotesRepository extends ServiceEntityRepository
         parent::__construct($registry, Quotes::class);
     }
 
+    public function add_quote(string $currency, float $rate) {
+        $em = $this->getEntityManager();
+
+        $quote = new Quotes();
+        $quote->setCurrency($currency);
+        $quote->setRate($rate);
+
+        $em->persist($quote);
+        $em->flush();
+        return true;
+    }
+
+    public function remove_quote(string $currency) {
+        $em = $this->getEntityManager();
+    }
+
+    public function change_quote_rate(string $currency, int $rate) {
+        $em = $this->getEntityManager();
+        
+        $quote = $em->getRepository(Quotes::class)->findOneBy(["currency" => $currency]);
+        $quote->setCurrency($currency);
+        $quote->setRate($rate);
+
+        $em->persist($quote);
+        $em->flush();
+        return true;
+    }
+
+
+    public function get_all_quotes() {
+        $em = $this->getEntityManager();
+        $quotes = $em->getRepository(Quotes::class)->findAll();
+        return $quotes;
+    }
+
 //    /**
 //     * @return Quotes[] Returns an array of Quotes objects
 //     */

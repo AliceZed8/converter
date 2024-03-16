@@ -226,7 +226,6 @@
 
     [fromCur, toCur].forEach((select, i) => {
         for (let curCode of Country_List) {
-            console.log(curCode);
             const selected = (i === 0 && curCode === "AED") || (i === 1 && curCode === "AED") ? "selected" : "";
             select.insertAdjacentHTML("beforeend", `<option value="${curCode}" ${selected}>${curCode}</option>`);
         }
