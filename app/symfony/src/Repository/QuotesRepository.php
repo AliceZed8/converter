@@ -37,7 +37,7 @@ class QuotesRepository extends ServiceEntityRepository
         $em = $this->getEntityManager();
     }
 
-    public function change_quote_rate(string $currency, int $rate) {
+    public function update_quote(string $currency, int $rate) {
         $em = $this->getEntityManager();
         
         $quote = $em->getRepository(Quotes::class)->findOneBy(["currency" => $currency]);
@@ -50,7 +50,7 @@ class QuotesRepository extends ServiceEntityRepository
     }
 
 
-    public function get_all_quotes() {
+    public function get_all_quotes(): array {
         $em = $this->getEntityManager();
         $quotes = $em->getRepository(Quotes::class)->findAll();
         return $quotes;

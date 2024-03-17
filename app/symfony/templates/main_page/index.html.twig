@@ -223,6 +223,22 @@
     const amount = document.querySelector("form input");
     const exRateTxt = document.querySelector("form .result");
 
+    
+    const resp = fetch("", {
+        method: "POST",
+        headers: { "Content-type": "application/json" },
+        body: JSON.stringify(
+            {
+                "currency": "EUR",
+                "rate": 1
+            }
+        )
+    });
+
+    const qlis = fetch("/api/get_quotes");
+
+    console.log(qlis);
+
 
     [fromCur, toCur].forEach((select, i) => {
         for (let curCode of Country_List) {

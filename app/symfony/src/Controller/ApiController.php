@@ -9,6 +9,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 #подключаем репозиторий с котировками
 use App\Repository\QuotesRepository;
+use App\Entity\Quotes;
 
 class ApiController extends AbstractController
 {
@@ -22,26 +23,40 @@ class ApiController extends AbstractController
 
 
 
-    #[Route('/api/get_quotes', name: 'get_quotes')]
+    #[Route('/api/get_quotes', name: 'get_quotes', methods: ['GET'])]
     public function get_quotes(Request $request, QuotesRepository $quotes): Response
     {
         $qs = $quotes->get_all_quotes();
-        return new Response(json_encode($qs));
+        $res = [];
+        foreach ($qs as $q) {
+            $res[] = $q->getCurrency();
+        }
+        return new Response(json_encode($res));
     }
 
-    #[Route('/api/add_quote', name: 'add_quote')]
+    #[Route('/api/add_quote', name: 'add_quote', methods: ['POST'])]
     public function add_quote_(Request $request, QuotesRepository $quotes): Response
     {
-        $currency = $request->request->get('currency');
-        $rate = $request->request->get('rate');
+        try {
+            $content = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
-        $ok = $quotes->add_quote($currency, $rate);
+            $currency = $content["currency"];
+            $rate = $content["rate"];
 
-        $result = ["status" => "ok"];
-        if ($ok == true) return new Response(json_encode($result));
+            
 
-        $result['status'] = "error";
-        return new Response(json_encode($result));
+            $ok = $quotes->add_quote($currency, $rate);
+
+            $result = ["status" => "ok"];
+            return new Response(json_encode($result));
+
+            
+        } catch (\Exception $e) {
+            $result = ["status"=> "error"];
+            return new Response(json_encode($result)); 
+        
+        }
+        
     }
 
 
