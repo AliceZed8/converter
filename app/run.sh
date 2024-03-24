@@ -12,6 +12,8 @@ php bin/console doctrine:database:create --if-not-exists
 #Запускаем миграции
 php bin/console doctrine:migrations:migrate
 
+#Импортируем котировки
+php bin/console app:import_quotes
 
 
 #Запускаем PHP-FPM
