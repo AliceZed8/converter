@@ -53,7 +53,15 @@ class QuotesRepository extends ServiceEntityRepository
     public function get_all_quotes(): array {
         $em = $this->getEntityManager();
         $quotes = $em->getRepository(Quotes::class)->findAll();
-        return $quotes;
+
+
+        $result = [];
+        foreach ($quotes as $quote) {
+            $result[] = ["currency" => $quote->getCurrency(),"rate"=> $quote->getRate()];
+        }
+
+
+        return $result;
     }
 
 //    /**

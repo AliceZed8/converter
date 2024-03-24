@@ -22,18 +22,27 @@ class ApiController extends AbstractController
     }
 
 
+    /*
+        Для получения котировок GET
 
+        curl -X GET localhost:8080/api/get_quotes
+        
+        -> ["EUR", "USD", ...]
+    */
     #[Route('/api/get_quotes', name: 'get_quotes', methods: ['GET'])]
     public function get_quotes(Request $request, QuotesRepository $quotes): Response
     {
-        $qs = $quotes->get_all_quotes();
-        $res = [];
-        foreach ($qs as $q) {
-            $res[] = $q->getCurrency();
-        }
-        return new Response(json_encode($res));
+        
+        return new Response(json_encode($quotes->get_all_quotes()));
     }
 
+    /*
+        Для добавления котировки
+
+        curl -X POST localhost:8080/api/add_quote -d '{"currency":"USD", "rate":1.09}'
+
+        -> {"status": "..."}
+    */
     #[Route('/api/add_quote', name: 'add_quote', methods: ['POST'])]
     public function add_quote_(Request $request, QuotesRepository $quotes): Response
     {
@@ -60,14 +69,23 @@ class ApiController extends AbstractController
     }
 
 
-    #[Route('/api/get_exchange_rate', name: 'get_exchange_rate')]
+    #[Route('/api/get_exchange_rate', name: 'get_exchange_rate', methods: ['POST'])]
     public function get_exchange_rate(Request $request, QuotesRepository $quotes): Response
     {
-        $from = $request->request->get("from");
-        $to = $request->request->get("to");
-        $amount = $request->request->get("amount");
-        return $this->render('api/index.html.twig', [
-            'controller_name' => 'ApiController',
-        ]);
+        try {
+            $content = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            $from = $content["from"];
+            $to = $content["to"];
+            $amount = $content["amount"];
+
+            $result = ["status" => "ok", "exchange_rate" => 1];
+            return new Response(json_encode($result));
+            
+
+        } catch (\Exception $e) {
+            $result = ["status" => "error"];
+            return new Response(json_encode($result));
+        }
+        
     }
 }
