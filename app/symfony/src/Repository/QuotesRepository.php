@@ -46,7 +46,6 @@ class QuotesRepository extends ServiceEntityRepository
 
         $em->persist($quote);
         $em->flush();
-        return true;
     }
 
 

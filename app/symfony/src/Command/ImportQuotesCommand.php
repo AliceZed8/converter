@@ -3,6 +3,8 @@
 namespace App\Command;
 
 use App\Entity\Quotes;
+use App\Repository\QuotesRepository;
+
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -12,25 +14,26 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+
 #[AsCommand(
     name: 'app:import_quotes',
     description: 'import quotes from https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml',
 )]
 class ImportQuotesCommand extends Command
 {   
-    private ManagerRegistry $managerRegistry;
+    private QuotesRepository $quotesRepository;
 
-    public function __construct(ManagerRegistry $managerRegistry)
+    public function __construct(QuotesRepository $quotesRepository)
     {
         parent::__construct();
 
-        $this->managerRegistry = $managerRegistry;
+        $this->quotesRepository = $quotesRepository;
     }
 
     protected function configure(): void
     {
         $this
-            ->addOption("update", null, InputOption::VALUE_OPTIONAL, "update quotes in database")
+            ->addOption("update", null, InputOption::VALUE_OPTIONAL, "update quotes in database | bool")
         ;
     }
 
@@ -54,26 +57,14 @@ class ImportQuotesCommand extends Command
 
 
     protected function addQuotes(array $quotes): void {
-        $manager = $this->managerRegistry->getManager();
-
         foreach ($quotes as $q) {
-            $quote = new Quotes();
-            $quote->setCurrency($q["currency"]);
-            $quote->setRate($q["rate"]);
-
-            $manager->persist($quote);
-            $manager->flush();
+            $this->quotesRepository->add_quote($q["currency"], $q["rate"]);
         }
     }
 
     protected function updateQuotes(array $quotes): void {
-        $rep = $this->managerRegistry->getManager()->getRepository(Quotes::class);
         foreach ($quotes as $q) {
-            $quote = $rep->findOneBy(["currency" => $q["currency"]]);
-            $quote->setRate($q["rate"]);
-
-            $rep->persist($quote);
-            $rep->flush();
+            $this->quotesRepository->update_quote($q["currency"], $q["rate"]);
         }
     }
 
@@ -89,16 +80,17 @@ class ImportQuotesCommand extends Command
         $quotes = [];
         try {
             $quotes = $this->load_quotes();
+            $quotes[] = [
+                "currency" => "EUR",
+                "rate" => 1.0
+            ];  
         } catch(\Exception $e) {
             $io->error($e->getMessage());
             $io->error("Failed to load quotes");
             return Command::FAILURE;
         }
         
-        $quotes[] = [
-            "currency" => "EUR",
-            "rate" => 1.0
-        ];
+        
 
         if ("true" === $update_opt) {
             $this->updateQuotes($quotes);
