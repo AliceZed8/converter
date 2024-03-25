@@ -183,7 +183,7 @@
         <form>
             <div class="amount">
                 <p>Amount</p>
-                <input type="text" value="1">
+                <input type="text" oninput="this.value = this.value.replace(/[^0-9]/g, '')" value=1>
             </div>
             <div class="convert-box">
                 <div class="from">
@@ -227,20 +227,12 @@
 
     const exRateTxt = document.querySelector("form .result");
 
-    
-    const resp = fetch("", {
-        method: "POST",
-        headers: { "Content-type": "application/json" },
-        body: JSON.stringify(
-            {
-                "currency": "EUR",
-                "rate": 1
-            }
-        )
-    });
-
     async function getExchangeRate() {
         const amountVal = amount.value || 1;
+        if (amountVal === 1) {
+            amount.value = 1;
+        }
+
         exRateTxt.innerText = "Getting exchange rate...";
 
         const response = await fetch("/api/get_exchange_rate", {
@@ -248,19 +240,17 @@
         headers: { "Content-type": "application/json" },
         body: JSON.stringify(
             {
-                "from": fromCur,
-                "to": toCur,
-                "amount": amountVal
+                "from": fromCur.value,
+                "to": toCur.value
             }
         )});
 
         const result = await response.json();
 
-
         if (result.status == "ok"){
             const exchangeRate = result.exchange_rate;
 
-            const converted = (amountVal * exchangeRate).toFixed(2);
+            const converted = (amountVal * exchangeRate).toFixed(3);
 
             exRateTxt.innerText = `${amountVal} ${fromCur.value} = ${converted} ${toCur.value}`;
             return;

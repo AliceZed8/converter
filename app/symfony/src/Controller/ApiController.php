@@ -55,21 +55,91 @@ class ApiController extends AbstractController
             $currency = $content["currency"];
             $rate = $content["rate"];
 
-            
 
-            $ok = $quotes->add_quote($currency, $rate);
+            if ($quotes->quote_exists($currency)) {
+                return new Response(json_encode(["status" => "error"]));
+            }
 
-            $result = ["status" => "ok"];
-            return new Response(json_encode($result));
+            $quotes->add_quote($currency, $rate);
+            return new Response(json_encode(["status" => "ok"]));
 
             
         } catch (\Exception $e) {
-            $result = ["status"=> "error"];
-            return new Response(json_encode($result)); 
+            return new Response(json_encode(["status" => "error"])); 
         
         }
         
     }
+
+    /*
+        Для удаления котировки
+
+        curl -X POST localhost:8080/api/remove_quote -d '{"currency":"USD"}'
+
+        -> {"status": "..."}
+    */
+    #[Route('/api/remove_quote', name: 'remove_quote', methods: ['POST'])]
+    public function remove_quote_(Request $request, QuotesRepository $quotes): Response
+    {
+        try {
+            $content = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+            $currency = $content["currency"];
+            if (!$quotes->remove_quote($currency)) {
+                return new Response(json_encode(["status"=> "error"]));
+            }
+
+            return new Response(json_encode(["status"=> "ok"]));
+
+            
+        } catch (\Exception $e) {
+            return new Response(json_encode(["status" => "error"])); 
+        
+        }
+        
+    }
+
+
+
+
+    /*
+        Для обновления котировки
+
+        curl -X POST localhost:8080/api/update_quote -d '{"currency":"USD", "rate":1.09}'
+
+        -> {"status": "..."}
+    */
+    #[Route('/api/update_quote', name: 'update_quote', methods: ['POST'])]
+    public function update_quote_(Request $request, QuotesRepository $quotes): Response
+    {
+        try {
+            $content = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+            $currency = $content["currency"];
+            $rate = $content["rate"];
+
+            //если котировка есть в бд
+            if ($quotes->update_quote($currency, $rate)) {
+                return new Response(json_encode(["status"=> "ok"]));
+            }
+
+            return new Response(json_encode(["status" => "error"]));       
+            
+            
+        } catch (\Exception $e) {
+            return new Response(json_encode(["status" => "error"])); 
+        
+        }
+        
+    }
+
+    /*
+        Для получения курса обмена
+
+        curl -X POST localhost:8080/api/get_exchange_rate -d '{"from":"USD", "to": "EUR"}'
+
+        -> {"status": "...", "exchange_rate": ...}
+    */
 
 
     #[Route('/api/get_exchange_rate', name: 'get_exchange_rate', methods: ['POST'])]
@@ -77,17 +147,48 @@ class ApiController extends AbstractController
     {
         try {
             $content = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+
+            $from = $request->request->get("from");
+            $to = $request->request->get("to");
+
             $from = $content["from"];
             $to = $content["to"];
-            $amount = $content["amount"];
 
-            $result = ["status" => "ok", "exchange_rate" => 1];
-            return new Response(json_encode($result));
+            if ("EUR" === $from) {
+                $quote = $quotes->get_quote($to);
+
+                //если котировки нет
+                if (is_null($quote)) {
+                    return new Response(json_encode(["status"=> "error"]));
+                }
+                
+                $rate = $quote->getRate();
+                return new Response(json_encode([
+                    "status"=> "ok",
+                    "exchange_rate" => $rate
+                ]));
+
+            } 
+
+            //кросс курс
+            $from_quote = $quotes->get_quote($from);
+            $to_quote = $quotes->get_quote($to);
+
+            //Если отсутствуют котировки
+            if (is_null($from_quote) || is_null($to_quote)) {
+                return new Response(json_encode(["status"=> "error"]));
+            }
+
+            $rate = $to_quote->getRate() / $from_quote->getRate();
+            return new Response(json_encode([
+                "status"=> "ok",
+                "exchange_rate" => $rate
+            ]));
             
 
         } catch (\Exception $e) {
-            $result = ["status" => "error"];
-            return new Response(json_encode($result));
+            return new Response(json_encode(["status" => "error"]));
         }
         
     }
