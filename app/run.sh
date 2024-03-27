@@ -15,9 +15,6 @@ php bin/console doctrine:database:create --if-not-exists --env=test
 php bin/console doctrine:migrations:migrate --env=test
 
 
-#Запускаем тесты
-php bin/phpunit --coverage-html coverage/
-
 #Импортируем котировки
 php bin/console app:import_quotes
 
