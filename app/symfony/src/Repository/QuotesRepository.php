@@ -20,60 +20,45 @@ class QuotesRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Quotes::class);
     }
-
-    public function add_quote(string $currency, float $rate) {
+    public function get(string $currency) {
         $em = $this->getEntityManager();
-
-        $quote = new Quotes();
-        $quote->setCurrency($currency);
-        $quote->setRate($rate);
-
-        $em->persist($quote);
-        $em->flush();
-        return true;
-    }
-
-    public function quote_exists(string $currency) {
-        $em = $this->getEntityManager();
-        $quote = $em->getRepository(Quotes::class)->findBy(["currency" => $currency]);
-        return count($quote) > 0;
-    }
-
-
-    public function remove_quote(string $currency) {
-        $em = $this->getEntityManager();
-        $quote = $em->getRepository(Quotes::class)->findOneBy(["currency"=> $currency]);
-        if (is_null( $quote)) return false;
-
-        $em->remove($quote);
-        $em->flush();
-        return true;
-    }
-
-    public function update_quote(string $currency, float $rate) {
-        $em = $this->getEntityManager();
-        
         $quote = $em->getRepository(Quotes::class)->findOneBy(["currency" => $currency]);
-        if (is_null( $quote)) return false;
-
-        $quote->setCurrency($currency);
-        $quote->setRate($rate);
-
-        $em->persist($quote);
-        $em->flush();
-
-        return true;
-    }
-
-    public function get_quote(string $currency) {
-        $em = $this->getEntityManager();
-        
-        $quote = $em->getRepository(Quotes::class)->findOneBy(["currency" => $currency]);
-
         return $quote;
     }
+    public function add(Quotes $quote): void {
+        $em = $this->getEntityManager();
+        $em->persist($quote);
+        $em->flush();
+    }
 
-    public function get_all_quotes(): array {
+    public function remove(string $currency): void  {
+        $em = $this->getEntityManager();
+        $quote = $em->getRepository(Quotes::class)->findOneBy(["currency"=> $currency]);
+        $em->remove($quote);
+        $em->flush();
+    }
+
+    public function update(string $currency, float $rate): void {
+        $em = $this->getEntityManager();
+        
+        $quote = $em->getRepository(Quotes::class)->findOneBy(["currency" => $currency]);
+        $quote->setCurrency($currency);
+        $quote->setRate($rate);
+
+        $em->persist($quote);
+        $em->flush();
+    }
+
+    
+    /**
+        *Возвращает массив из котировок: [
+        *    [ "currency" => "EUR", "rate" => 1], ....
+        *]
+    */
+    public function get_all(): array {
+
+
+        
         $em = $this->getEntityManager();
         $quotes = $em->getRepository(Quotes::class)->findAll();
 

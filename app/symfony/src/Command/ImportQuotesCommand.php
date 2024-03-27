@@ -6,6 +6,7 @@ use App\Entity\Quotes;
 use App\Repository\QuotesRepository;
 
 use Doctrine\Persistence\ManagerRegistry;
+use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -33,76 +34,59 @@ class ImportQuotesCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption("update", null, InputOption::VALUE_OPTIONAL, "update quotes in database | bool")
+            ->addArgument('test_url', InputArgument::OPTIONAL, 'some test url', "none")
         ;
     }
-
-    protected function load_quotes(): array{
-        $quotes = [];
-        $result = file_get_contents("https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml");
-        $xml = simplexml_load_string($result);
-        
-        
-        foreach($xml->Cube->Cube->Cube as $Cube) {
-            $quotes[] = [
-                "currency" => (string) $Cube->attributes()->currency,
-                "rate" => (float) $Cube->attributes()->rate
-            ];
-            unset($Cube);
-        }
-
-        
-        return $quotes;
-    }
-
-
-    protected function addQuotes(array $quotes): void {
-        foreach ($quotes as $q) {
-            $this->quotesRepository->add_quote($q["currency"], $q["rate"]);
-        }
-    }
-
-    protected function updateQuotes(array $quotes): void {
-        foreach ($quotes as $q) {
-            $this->quotesRepository->update_quote($q["currency"], $q["rate"]);
-        }
-    }
-
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 
-        $io->title("Loading quotes from ecb.europa.eu");
+        //Для тестирования
+        $default_uri = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
+        $test_url = $input->getArgument("test_url");
+        $url =  ("none" === $test_url) ?  $default_uri : $test_url;
 
-        $update_opt = $input->getOption("update");
-
+        $io->title("Loading quotes from $url");
         $quotes = [];
+
         try {
-            $quotes = $this->load_quotes();
+            //Парсим котировки
+            $result = file_get_contents($url);
+            $xml = simplexml_load_string($result);
+            foreach($xml->Cube->Cube->Cube as $Cube) {
+                $quotes[] = [
+                    "currency" => (string) $Cube->attributes()->currency,
+                    "rate" => (float) $Cube->attributes()->rate
+                ];
+                unset($Cube);
+            }
+            
+            if (count($quotes) === 0) throw new RuntimeException();
+
             $quotes[] = [
                 "currency" => "EUR",
                 "rate" => 1.0
-            ];  
+            ]; 
+            
+            
         } catch(\Exception $e) {
-            $io->error($e->getMessage());
             $io->error("Failed to load quotes");
             return Command::FAILURE;
         }
-        
-        
 
-        if ("true" === $update_opt) {
-            $this->updateQuotes($quotes);
-            $io->success("Quotes updated");
 
-            return Command::SUCCESS;
+        foreach ($quotes as $q) {
+            $quote = new Quotes();
+            $quote->setCurrency($q["currency"]);
+            $quote->setRate($q["rate"]);
+            $this->quotesRepository->add($quote);
         }
-            
 
-        $this->addQuotes($quotes);
-        $io->success("Quotes added");
-        
+        $output->write(json_encode($quotes));
+
+        $io->success("Quotes imported");
+    
         return Command::SUCCESS;
     }
 }

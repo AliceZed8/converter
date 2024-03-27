@@ -16,13 +16,13 @@ use App\Entity\Quotes;
 
 class ApiController extends AbstractController
 {
-    #[Route('/api', name: 'app_api')]
-    public function index(): Response
-    {
-        return $this->render('api/index.html.twig', [
-            'controller_name' => 'ApiController',
-        ]);
-    }
+    // #[Route('/api', name: 'app_api')]
+    // public function index(): Response
+    // {
+    //     return $this->render('api/index.html.twig', [
+    //         'controller_name' => 'ApiController',
+    //     ]);
+    // }
 
 
     /*
@@ -36,7 +36,7 @@ class ApiController extends AbstractController
     public function get_quotes(Request $request, QuotesRepository $quotes): Response
     {
         
-        return new Response(json_encode($quotes->get_all_quotes()));
+        return new Response(json_encode($quotes->get_all()));
     }
 
     /*
@@ -47,7 +47,7 @@ class ApiController extends AbstractController
         -> {"status": "..."}
     */
     #[Route('/api/add_quote', name: 'add_quote', methods: ['POST'])]
-    public function add_quote_(Request $request, QuotesRepository $quotes): Response
+    public function add_quote(Request $request, QuotesRepository $quotes): Response
     {
         try {
             $content = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
@@ -55,17 +55,20 @@ class ApiController extends AbstractController
             $currency = $content["currency"];
             $rate = $content["rate"];
 
+            if ($rate == 0) throw new \Exception("invalid rate");
 
-            if ($quotes->quote_exists($currency)) {
-                return new Response(json_encode(["status" => "error"]));
-            }
+            $quote = new Quotes();
+            $quote->setCurrency($currency);
+            $quote->setRate($rate);
 
-            $quotes->add_quote($currency, $rate);
+            if (!is_null($quotes->get($currency))) throw new \Exception("quote exists");
+
+            $quotes->add($quote);
             return new Response(json_encode(["status" => "ok"]));
 
             
         } catch (\Exception $e) {
-            return new Response(json_encode(["status" => "error"])); 
+            return new Response(json_encode(["status" => "error", "msg" => $e->getMessage()])); 
         
         }
         
@@ -79,21 +82,21 @@ class ApiController extends AbstractController
         -> {"status": "..."}
     */
     #[Route('/api/remove_quote', name: 'remove_quote', methods: ['POST'])]
-    public function remove_quote_(Request $request, QuotesRepository $quotes): Response
+    public function remove_quote(Request $request, QuotesRepository $quotes): Response
     {
         try {
             $content = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
             $currency = $content["currency"];
-            if (!$quotes->remove_quote($currency)) {
-                return new Response(json_encode(["status"=> "error"]));
-            }
+            
 
+            if (is_null($quotes->get($currency))) throw new \Exception("quote not exists");
+
+            $quotes->remove($currency);
             return new Response(json_encode(["status"=> "ok"]));
 
-            
         } catch (\Exception $e) {
-            return new Response(json_encode(["status" => "error"])); 
+            return new Response(json_encode(["status" => "error", "msg" => $e->getMessage()])); 
         
         }
         
@@ -117,17 +120,16 @@ class ApiController extends AbstractController
 
             $currency = $content["currency"];
             $rate = $content["rate"];
+            if ($rate == 0) throw new \Exception("invalid rate");
+
+            if (is_null($quotes->get($currency))) throw new \Exception("quote not exists");
 
             //если котировка есть в бд
-            if ($quotes->update_quote($currency, $rate)) {
-                return new Response(json_encode(["status"=> "ok"]));
-            }
+            $quotes->update($currency, $rate);
+            return new Response(json_encode(["status"=> "ok"]));
 
-            return new Response(json_encode(["status" => "error"]));       
-            
-            
         } catch (\Exception $e) {
-            return new Response(json_encode(["status" => "error"])); 
+            return new Response(json_encode(["status" => "error", "msg" => $e->getMessage()])); 
         
         }
         
@@ -147,38 +149,14 @@ class ApiController extends AbstractController
     {
         try {
             $content = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-
-
-            $from = $request->request->get("from");
-            $to = $request->request->get("to");
-
             $from = $content["from"];
             $to = $content["to"];
 
-            if ("EUR" === $from) {
-                $quote = $quotes->get_quote($to);
-
-                //если котировки нет
-                if (is_null($quote)) {
-                    return new Response(json_encode(["status"=> "error"]));
-                }
-                
-                $rate = $quote->getRate();
-                return new Response(json_encode([
-                    "status"=> "ok",
-                    "exchange_rate" => $rate
-                ]));
-
-            } 
-
-            //кросс курс
-            $from_quote = $quotes->get_quote($from);
-            $to_quote = $quotes->get_quote($to);
+            $from_quote = $quotes->get($from);
+            $to_quote = $quotes->get($to);
 
             //Если отсутствуют котировки
-            if (is_null($from_quote) || is_null($to_quote)) {
-                return new Response(json_encode(["status"=> "error"]));
-            }
+            if (is_null($from_quote) || is_null($to_quote)) throw new \Exception("quote or quotes not exists");
 
             $rate = $to_quote->getRate() / $from_quote->getRate();
             return new Response(json_encode([
@@ -188,7 +166,7 @@ class ApiController extends AbstractController
             
 
         } catch (\Exception $e) {
-            return new Response(json_encode(["status" => "error"]));
+            return new Response(json_encode(["status" => "error", "msg"=> $e->getMessage()]));
         }
         
     }

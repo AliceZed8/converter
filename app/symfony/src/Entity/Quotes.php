@@ -19,10 +19,6 @@ class Quotes
     #[ORM\Column]
     private ?float $rate = null;
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
 
     public function getCurrency(): ?string
     {

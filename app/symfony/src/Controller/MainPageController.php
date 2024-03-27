@@ -16,7 +16,7 @@ class MainPageController extends AbstractController
     {
         return $this->render('main_page/index.html.twig', [
             'controller_name' => 'MainPageController',
-            'quotes' => $quotes->get_all_quotes()
+            'quotes' => $quotes->get_all()
         ]);
     }
 }
